@@ -32,7 +32,7 @@ int main() {
 
 BA_data read_BA_file(std::string path) {
     BA_data ba_data;
-    std::fstream fid(path);
+    std::ifstream fid(path, std::ios::in);
     if (!fid) {
         std::cerr << "Could not open " << path << ".\n";
         exit(1);
