@@ -20,20 +20,20 @@ int main() {
     const double *data = &ba_data[0].d1;
     int n_samples = ba_data.size();
 
-    const int M=20, N=20;
+    const int M=100, N=100;
     double phi[M*N] = {0.0};
-    #pragma acc parallel loop collapse(3) copy(data[:3*n_samples]) copyout(phi)
-    for (int i=0; i<n_samples; ++i) {
-        for (int j=0; j<M; ++j) {
-            for (int k=0; k<N; ++k) {
+    #pragma acc data copy(data[:3*n_samples], phi)
+    {
+    #pragma acc parallel loop collapse(2) 
+    for (int j=0; j<M; ++j) {
+        for (int k=0; k<N; ++k) {
+            for (int i=0; i<n_samples; ++i) {
                 double d = data[3*i];
                 auto x = (d-2.2) / 0.05;
-                #pragma acc atomic update
-                {
                 phi[k + j*N] += exp(-x);
-                }
             }
         }
+    }
     }
     auto sum = 0.0;
     for (int i=0; i<M*N; ++i) sum += phi[i];
