@@ -1,10 +1,8 @@
-
 CPP=/opt/pgi/linux86-64-llvm/19.4/bin/pgc++
-
-CFLAGS=-fast 
+CFLAGS=-fast -acc -ta=nvidia,cc35 -Minfo=acc
 
 all:
-	${CPP} main.cpp -fast -o ba-probability
+	${CPP} main.cpp ${CFLAGS} -o ba-probability
 
 clean:
 	@rm ba-probability
