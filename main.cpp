@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <fstream>
 #include <math.h>
 
@@ -13,26 +14,47 @@ using BA_data = std::vector<BA>;
 BA_data read_BA_file(std::string path);
 
 
-int main() {
-    std::string ba_path = "/home/joswald1/development/ba-probability"
-                          "/ba-PE_50chains_160beads-1_EEE.txt";
+int main(int argc, char *argv[]) {
+
+    if (argc < 2) {
+        std::cout << "Usage:\n  ./ba-probability [path] (options)\n.";
+        return 1;
+    }
+    std::string ba_path = argv[1];
+                          
     auto ba_data = read_BA_file(ba_path); 
     const double *data = &ba_data[0].d1;
     int n_samples = ba_data.size();
 
     // Bounds on bond-length histogram - TODO: should be set by user.
-    const int M=100, N=100;
-    const auto xlo = 2.0,  xhi = 2.9;
-    const auto ylo = 70.0, yhi = 180.0;
+    int M=100, N=100;
+    auto xlo = 2.0,  xhi = 2.9;
+    auto ylo = 70.0, yhi = 180.0;
+    // How many grid spacings the distribution is spread over.
+    double d_width_factor = 1.5;
+    double q_width_factor = 1.5;
+    
+    // Loop over remaining arguments and set optional parameters.
+    for (int i=2; i<argc; ++i) {
+        if (strcmp(argv[i], "--num_theta") && ++i < argc) {
+            N = atoi(argv[i]);
+        }
+        else if (strcmp(argv[i], "--num_length") && ++i < argc) {
+            M = atoi(argv[i]);
+        }
+
+    }
+
     // Compute grid spacing.
     const auto dx = (xhi-xlo) / (M-1);
     const auto dy = (yhi-ylo) / (N-1);
     // kernel width is 1.5 grid spacings.
-    const auto wx = 1.5*dx;
-    const auto wy = 1.5*dy;
+    const auto wx = d_width_factor*dx;
+    const auto wy = q_width_factor*dy;
     const auto Z = 1.0 / (2.0 * acos(-1.0) * sqrt(wx*wy)) / (2.0 * ba_data.size());
-    double phi[M*N] = {0.0};
-    #pragma acc data copy(data[:3*n_samples], phi)
+    double *phi = new double[M*N];
+    for (int i=0; i<M*N; ++i) phi[i] = 0.0;
+    #pragma acc data copy(data[:3*n_samples], phi[:M*N])
     {
     #pragma acc parallel loop collapse(2) 
     for (int j=0; j<M; ++j) {
@@ -72,6 +94,7 @@ int main() {
             fid << phi[j + i*N];
         }
     }
+    delete [] phi;
 }
 
 
