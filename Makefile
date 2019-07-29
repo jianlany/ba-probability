@@ -3,7 +3,7 @@ target ?= ubuntu
 
 ifeq (${target},agave)
 CPP=pgc++
-CFLAGS=-fast -acc -ta=nvidia,cc70 -Minfo=acc
+CFLAGS=-fast -acc -ta=nvidia,cc70 -Minfo=acc -std=c++17
 endif
 
 ifeq (${target},ubuntu)
