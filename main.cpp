@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     // kernel width is 1.5 grid spacings.
     const auto wx = d_width_factor*dx;
     const auto wy = q_width_factor*dy;
-    const auto Z = 1.0 / (2.0 * acos(-1.0) * sqrt(wx*wy)) / (2.0 * ba_data.size());
+    const auto Z = 1.0 / (2.0 * acos(-1.0) * wx*wy) / (2.0 * ba_data.size());
     double *phi = new double[M*N];
     for (int i=0; i<M*N; ++i) phi[i] = 0.0;
     #pragma acc data copy(data[:3*n_samples], phi[:M*N])
