@@ -4,7 +4,18 @@
 #include <string.h>
 #include <fstream>
 #include <math.h>
-
+const double pi = 3.14159265358979323846;
+const std::string help_msg = 
+"Usage:\n"
+    "\tba-probability [path] (options).\n"
+    "\toptions:\n"
+        "\t\t--num_theta: number of bins on angle direction. Default: 100\n"
+        "\t\t--num_length: number of bins on bond direction. Default: 100\n"
+        "\t\t--d_width_factor: number of bins that the gaussion distribution will spread over on bond direction. Default: 1.5\n"
+        "\t\t--theta_width_factor: same but on angle direction. Default: 1.5\n"
+        "\t\t--d_range: the upper and lower limit of bond. Default: 2.0  2.9\n"
+        "\t\t--theta_range: the upper and lower limit of angle. Default: 70  180\n"
+        "\t\t--help: print this message.\n";
 struct BA {
     double d1, d2;
     double q;
@@ -15,16 +26,11 @@ BA_data read_BA_file(std::string path);
 
 
 int main(int argc, char *argv[]) {
-
     if (argc < 2) {
         std::cout << "Usage:\n  ./ba-probability [path] (options)\n.";
         return 1;
     }
     std::string ba_path = argv[1];
-                          
-    auto ba_data = read_BA_file(ba_path); 
-    const double *data = &ba_data[0].d1;
-    int n_samples = ba_data.size();
 
     // Bounds on bond-length histogram - TODO: should be set by user.
     int M=100, N=100;
@@ -33,14 +39,36 @@ int main(int argc, char *argv[]) {
     // How many grid spacings the distribution is spread over.
     double d_width_factor = 1.5;
     double q_width_factor = 1.5;
-    
     // Loop over remaining arguments and set optional parameters.
     for (int i=2; i<argc; ++i) {
-        if (strcmp(argv[i], "--num_theta") && ++i < argc) {
+        if (!strcmp(argv[i], "--help")) {
+            std::cout << help_msg;
+            exit(0);
+        }
+        else if (!strcmp(argv[i], "--num_theta") && ++i < argc) {
             N = atoi(argv[i]);
         }
-        else if (strcmp(argv[i], "--num_length") && ++i < argc) {
+        else if (!strcmp(argv[i], "--num_length") && ++i < argc) {
             M = atoi(argv[i]);
+        }
+        else if (!strcmp(argv[i], "--d_width_factor") && ++i < argc) {
+            d_width_factor = atoi(argv[i]);
+        }
+        else if (!strcmp(argv[i], "--q_width_factor") && ++i < argc) {
+            q_width_factor = atoi(argv[i]);
+        }
+        else if (!strcmp(argv[i], "--d_range") && (i+2) < argc) {
+            xlo = atoi(argv[++i]);
+            xhi = atoi(argv[++i]);
+        }
+        else if (!strcmp(argv[i], "--theta_range") && (i+2) < argc) {
+            ylo = atoi(argv[++i]);
+            yhi = atoi(argv[++i]);
+        }
+        else{
+            std::cerr << "Invalid input arguments: " << argv[i] << " \n";
+            std::cerr << help_msg;
+            exit(1);
         }
 
     }
@@ -51,12 +79,15 @@ int main(int argc, char *argv[]) {
     // kernel width is 1.5 grid spacings.
     const auto wx = d_width_factor*dx;
     const auto wy = q_width_factor*dy;
-    const auto Z = 1.0 / (2.0 * acos(-1.0) * wx*wy) / (2.0 * ba_data.size());
+    auto ba_data = read_BA_file(ba_path);
+    const double *data = &ba_data[0].d1;
+    int n_samples = ba_data.size();
+    const auto Z = 1.0 / (2.0 * pi * wx*wy) / (2.0 * ba_data.size());
     double *phi = new double[M*N];
     for (int i=0; i<M*N; ++i) phi[i] = 0.0;
     #pragma acc data copy(data[:3*n_samples], phi[:M*N])
     {
-    #pragma acc parallel loop collapse(2) 
+    #pragma acc parallel loop collapse(2)
     for (int j=0; j<M; ++j) {
         for (int k=0; k<N; ++k) {
             for (int i=0; i<n_samples; ++i) {
