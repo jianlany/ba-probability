@@ -84,8 +84,16 @@ int main(int argc, char *argv[]) {
     int n_samples = ba_data.size();
     const auto Z = 1.0 / (2.0 * pi * wx*wy) / (2.0 * ba_data.size());
     double *phi = new double[M*N];
-    for (int i=0; i<M*N; ++i) phi[i] = 0.0;
-    #pragma acc data copy(data[:3*n_samples], phi[:M*N])
+    double *phi_l = new double[M*N];
+    double *phi_q = new double[M*N];
+    double *phi_lq = new double[M*N];
+    for (int i=0; i<M*N; ++i) {
+        phi[i] = 0.0;
+        phi_l[i] = 0.0;
+        phi_q[i] = 0.0;
+        phi_lq[i] = 0.0;
+    }
+    #pragma acc data copy(data[:3*n_samples], phi[:M*N], phi_l[:M*N], phi_q[:M*N], phi_lq[:M*N])
     {
     #pragma acc parallel loop collapse(2)
     for (int j=0; j<M; ++j) {
@@ -96,11 +104,16 @@ int main(int argc, char *argv[]) {
                 auto q = data[3*i+2];
                 auto xj = xlo + dx*j;
                 auto yk = ylo + dy*k;
-                auto x1 = (d1-xj) / wx;
-                auto x2 = (d2-xj) / wx;
-                auto y = (q-yk) / wy;
-                phi[k + j*N] += Z*exp(-0.5*(x1*x1 + y*y));
-                phi[k + j*N] += Z*exp(-0.5*(x2*x2 + y*y));
+                auto x1 = (xj-d1) / wx;
+                auto x2 = (xj-d2) / wx;
+                auto y = (yk-q) / wy;
+                auto exp1 = exp(-0.5*(x1*x1 + y*y));
+                auto exp2 = exp(-0.5*(x2*x2 + y*y));
+                phi[k + j*N] += Z*exp1 + Z*exp2;
+                phi_l[k + j*N] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
+                phi_q[k + j*N] += Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
+                phi_lq[k + j*N] += Z*exp1*(y/wy)*(x1/wx) +
+                                   Z*exp2*(y/wy)*(x2/wx);
             }
         }
     }
@@ -117,15 +130,30 @@ int main(int argc, char *argv[]) {
     }
     // Sum should be close to 1.0.
     std::cout << "Sum = " << sum << "\n";
-    std::fstream fid("p.txt", std::ios::out);
+    std::fstream fid1("p.txt", std::ios::out);
+    std::fstream fid2("p_l.txt", std::ios::out);
+    std::fstream fid3("p_q.txt", std::ios::out);
+    std::fstream fid4("p_lq.txt", std::ios::out);
     for (int i=0; i<M; ++i) {
-        if (i > 0) fid << "\n";
+        if (i > 0) fid1 << "\n";
+        if (i > 0) fid2 << "\n";
+        if (i > 0) fid3 << "\n";
+        if (i > 0) fid4 << "\n";
         for (int j=0; j<N; ++j) {
-            if (j > 0) fid << " ";
-            fid << phi[j + i*N];
+            if (j > 0) fid1 << " ";
+            if (j > 0) fid2 << " ";
+            if (j > 0) fid3 << " ";
+            if (j > 0) fid4 << " ";
+            fid1 << phi[j + i*N];
+            fid2 << phi_l[j + i*N];
+            fid3 << phi_q[j + i*N];
+            fid4 << phi_lq[j + i*N];
         }
     }
     delete [] phi;
+    delete [] phi_l;
+    delete [] phi_q;
+    delete [] phi_lq;
 }
 
 
