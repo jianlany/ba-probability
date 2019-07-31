@@ -31,9 +31,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     std::string ba_path = argv[1];
+    std::string output_path = "p.txt";
 
     // Bounds on bond-length histogram - TODO: should be set by user.
-    int M=100, N=100;
+    int nl=100, nq=100;
     auto xlo = 2.0,  xhi = 2.9;
     auto ylo = 70.0, yhi = 180.0;
     // How many grid spacings the distribution is spread over.
@@ -46,10 +47,10 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
         else if (!strcmp(argv[i], "--num_theta") && ++i < argc) {
-            N = atoi(argv[i]);
+            nq = atoi(argv[i]);
         }
         else if (!strcmp(argv[i], "--num_length") && ++i < argc) {
-            M = atoi(argv[i]);
+            nl = atoi(argv[i]);
         }
         else if (!strcmp(argv[i], "--d_width_factor") && ++i < argc) {
             d_width_factor = atoi(argv[i]);
@@ -65,40 +66,39 @@ int main(int argc, char *argv[]) {
             ylo = atoi(argv[++i]);
             yhi = atoi(argv[++i]);
         }
+        else if (!strcmp(argv[i], "--output-file") && ++i < argc) {
+            output_path = argv[i];
+        }
         else{
             std::cerr << "Invalid input arguments: " << argv[i] << " \n";
             std::cerr << help_msg;
             exit(1);
         }
-
     }
-
     // Compute grid spacing.
-    const auto dx = (xhi-xlo) / (M-1);
-    const auto dy = (yhi-ylo) / (N-1);
+    const auto dx = (xhi-xlo) / (nl-1);
+    const auto dy = (yhi-ylo) / (nq-1);
+    const auto N = nq * nl;
     // kernel width is 1.5 grid spacings.
     const auto wx = d_width_factor*dx;
     const auto wy = q_width_factor*dy;
     auto ba_data = read_BA_file(ba_path);
     const double *data = &ba_data[0].d1;
-    int n_samples = ba_data.size();
+    int n_ba = ba_data.size();
     const auto Z = 1.0 / (2.0 * pi * wx*wy) / (2.0 * ba_data.size());
-    double *phi = new double[M*N];
-    double *phi_l = new double[M*N];
-    double *phi_q = new double[M*N];
-    double *phi_lq = new double[M*N];
-    for (int i=0; i<M*N; ++i) {
-        phi[i] = 0.0;
-        phi_l[i] = 0.0;
-        phi_q[i] = 0.0;
-        phi_lq[i] = 0.0;
+    double *p = new double[N];
+    double *p_l = new double[N];
+    double *p_q = new double[N];
+    double *p_lq = new double[N];
+    for (int i=0; i<N; ++i) {
+        p[i] = p_l[i] = p_q[i] = p_lq[i] = 0.0;
     }
-    #pragma acc data copy(data[:3*n_samples], phi[:M*N], phi_l[:M*N], phi_q[:M*N], phi_lq[:M*N])
+    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N])
     {
     #pragma acc parallel loop collapse(2)
-    for (int j=0; j<M; ++j) {
-        for (int k=0; k<N; ++k) {
-            for (int i=0; i<n_samples; ++i) {
+    for (int j=0; j<nl; ++j) {
+        for (int k=0; k<nq; ++k) {
+            for (int i=0; i<n_ba; ++i) {
                 auto d1 = data[3*i];
                 auto d2 = data[3*i+1];
                 auto q = data[3*i+2];
@@ -109,51 +109,51 @@ int main(int argc, char *argv[]) {
                 auto y = (yk-q) / wy;
                 auto exp1 = exp(-0.5*(x1*x1 + y*y));
                 auto exp2 = exp(-0.5*(x2*x2 + y*y));
-                phi[k + j*N] += Z*exp1 + Z*exp2;
-                phi_l[k + j*N] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
-                phi_q[k + j*N] += Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
-                phi_lq[k + j*N] += Z*exp1*(y/wy)*(x1/wx) +
+                p[k + j*nq] += Z*exp1 + Z*exp2;
+                p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
+                p_q[k + j*nq] += Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
+                p_lq[k + j*nq] += Z*exp1*(y/wy)*(x1/wx) +
                                    Z*exp2*(y/wy)*(x2/wx);
             }
         }
     }
     }
     auto sum = 0.0;
-    for (int i=0; i<M-1; ++i) {
-        for (int j=0; j<N-1; ++j) {
-            auto p1 = phi[j   + i*N];
-            auto p2 = phi[j   + (i+1)*N];
-            auto p3 = phi[j+1 + (i+1)*N];
-            auto p4 = phi[j+1 + i*N];
+    for (int i=0; i<nl-1; ++i) {
+        for (int j=0; j<nq-1; ++j) {
+            auto p1 = p[j   + i*nq];
+            auto p2 = p[j   + (i+1)*nq];
+            auto p3 = p[j+1 + (i+1)*nq];
+            auto p4 = p[j+1 + i*nq];
             sum += 0.25*(p1+p2+p3+p4) * dx * dy;
         }
     }
     // Sum should be close to 1.0.
     std::cout << "Sum = " << sum << "\n";
-    std::fstream fid1("p.txt", std::ios::out);
-    std::fstream fid2("p_l.txt", std::ios::out);
-    std::fstream fid3("p_q.txt", std::ios::out);
-    std::fstream fid4("p_lq.txt", std::ios::out);
-    for (int i=0; i<M; ++i) {
-        if (i > 0) fid1 << "\n";
-        if (i > 0) fid2 << "\n";
-        if (i > 0) fid3 << "\n";
-        if (i > 0) fid4 << "\n";
-        for (int j=0; j<N; ++j) {
-            if (j > 0) fid1 << " ";
-            if (j > 0) fid2 << " ";
-            if (j > 0) fid3 << " ";
-            if (j > 0) fid4 << " ";
-            fid1 << phi[j + i*N];
-            fid2 << phi_l[j + i*N];
-            fid3 << phi_q[j + i*N];
-            fid4 << phi_lq[j + i*N];
+    std::fstream fid(output_path, std::ios::out);
+
+    fid << "# Probability: " << ba_path << "\n";
+    fid << "# Grid size: " << nl << " " << nq << "\n";
+    fid << "# (bond length) xlo xhi: " << xlo << " " << xhi << "\n";
+    fid << "# (bond angle)  ylo yhi: " << ylo << " " << yhi << "\n";
+    auto write_table = [&](const double *x, const char *label) {
+        fid << "# " << label << "\n";
+        for (int j=0; j<nq; ++j) {
+            for (int i=0; i<nl; ++i) {
+                if (i > 0) fid << " ";
+                fid << x[j + i*nq];
+            }
+            fid << "\n";
         }
-    }
-    delete [] phi;
-    delete [] phi_l;
-    delete [] phi_q;
-    delete [] phi_lq;
+    };
+    write_table(p, "p");
+    write_table(p_l, "dp/dl");
+    write_table(p_q, "dp/dq");
+    write_table(p_lq, "dp^2/dldq");
+    delete [] p;
+    delete [] p_l;
+    delete [] p_q;
+    delete [] p_lq;
 }
 
 
