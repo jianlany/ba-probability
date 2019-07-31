@@ -3,3 +3,4 @@ ba-*.txt
 *.o
 p.png
 *.txt
+__pycache__

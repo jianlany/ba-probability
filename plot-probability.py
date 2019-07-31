@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
 import numpy
 from matplotlib import pyplot
+from ba_probability import read_probability_file
 pyplot.rc('font', size=8)
 pyplot.rc('mathtext', fontset='cm')
 
 
-def read_probability_file(path):
-    class Data:  pass
-    data = Data()
-    fid = open('p.txt', 'rb')
-    fid.readline()   # tells BA file (skip).
-    data.M, data.N = [int(s) for s in fid.readline().split()[-2:]]
-    data.xlo, data.xhi = [float(s) for s in fid.readline().split()[-2:]]
-    data.ylo, data.yhi = [float(s) for s in fid.readline().split()[-2:]]
-    fid.readline()  # should be p 
-    
-    data.p = numpy.genfromtxt(fid, max_rows=data.N)
-    fid.readline()  # should be dpdl
-    data.dpdl = numpy.genfromtxt(fid, max_rows=data.N)
-    fid.readline()  # should be dpdq
-    data.dpdq = numpy.genfromtxt(fid, max_rows=data.N)
-    fid.readline()  # should be dpdql
-    data.dpdql = numpy.genfromtxt(fid, max_rows=data.N)
-    return data
      
 data = read_probability_file('p.txt')
 Y = 0.1*numpy.linspace(data.xlo, data.xhi, data.M)
