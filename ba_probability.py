@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 import numpy
+from matplotlib import pyplot
+from mpl_toolkits.mplot3d import Axes3D
+pyplot.rc('font', size=8)
+pyplot.rc('mathtext', fontset='cm')
+
 
 kB = 0.001987204118
 
@@ -31,10 +36,64 @@ def compute_initial_energy(data, T=300.0):
     dUdl = -kB * T * data.dpdl / data.p
     dUdq = -kB * T * data.dpdq / data.p
     dUdql = -kB * T * (data.dpdql / data.p - data.dpdl*data.dpdq / (data.p*data.p))
-    print(U.max(), U.min())
+
+    x = numpy.linspace(data.xlo, data.xhi, data.M)
+    y = numpy.linspace(data.ylo, data.yhi, data.N)
+    x,y = numpy.meshgrid(x,y)
+    fig = pyplot.figure(figsize=(3,3))
+    ax = fig.gca(projection = '3d')
+    ax.plot_surface(x,y,U, Linewidth=0)
+    pyplot.tight_layout()
+    pyplot.savefig('U.png', dpi=300)
+
+    dx = (data.xhi - data.xlo) / (data.M - 1)
+    dy = (data.yhi - data.ylo) / (data.N - 1)
+    verify_derivatives(U, dUdl, dUdq, dUdql, dx, dy, 'energy-derivatives.png')
+
+
+def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
+    norm = numpy.linalg.norm
+     # Test that dpdl is accurate.
+    fx = (f[:,2:] - f[:,:-2]) / (2.0*dx)
+    e1 = norm(fx - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
+    print('dfdx error norm: {:.5f}'.format(e1))
+
+    fy = (f[2:,:] - f[:-2,:]) / (2.0*dy)
+    e2 = norm(fy - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
+    print('dfdy error norm: {:.5f}'.format(e2))
+
+    fxy = (fy[:,2:] - fy[:,:-2]) / (2.0*dx)
+    e3 = norm(fxy - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
+    print('d2xdxdy error norm: {:.5f}'.format(e3))
+
+    if plot is not None:
+        pyplot.figure(figsize=(6,4))
+        vv = numpy.linspace(-1, 1, 40)
+        pp = dict(linewidths = 0.4)
+        s = fx.max() * 0.1
+        ax = pyplot.subplot(231)
+        ax.contour(fx.T, s*vv, vmin=-s, vmax=s, **pp)
+        ax = pyplot.subplot(234)
+        ax.contour(dfdx[:,1:-1].T, s*vv, vmin=-s, vmax=s, **pp)
+
+        ax = pyplot.subplot(232)
+        s = fy.max() * 0.1
+        ax.contour(fy.T, s*vv, vmin=-s, vmax=s, **pp)
+        ax = pyplot.subplot(235)
+        ax.contour(dfdy[1:-1,:].T, s*vv, vmin=-s, vmax=s, **pp)
+
+        ax = pyplot.subplot(233)
+        s = fxy.max() * 0.1
+        ax.contour(fxy.T, s*vv, vmin=-s, vmax=s, **pp)
+        ax = pyplot.subplot(236)
+        ax.contour(df2dxy[1:-1,1:-1:].T, s*vv, vmin=-s, vmax=s, **pp)
+
+        pyplot.tight_layout()
+        pyplot.savefig(plot, dpi=300)
 
 
 if __name__ == '__main__':
     data = read_probability_file('p.txt')
     compute_initial_energy(data)
+
 

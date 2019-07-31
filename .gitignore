@@ -1,6 +1,6 @@
 ba-probability
 ba-*.txt
 *.o
-p.png
+*.png
 *.txt
 __pycache__
