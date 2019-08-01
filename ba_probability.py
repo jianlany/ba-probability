@@ -33,9 +33,10 @@ def compute_initial_energy(data, T=300.0):
     ''' Computes the initial guess for the bond-angle energy from a probability
     distribution file. '''
     U = -kB * T * numpy.log(data.p)
-    dUdl = -kB * T * data.dpdl / data.p
-    dUdq = -kB * T * data.dpdq / data.p
-    dUdql = -kB * T * (data.dpdql / data.p - data.dpdl*data.dpdq / (data.p*data.p))
+    Ul = -kB * T * data.dpdl / data.p
+    Uq = -kB * T * data.dpdq / data.p
+    Ulq = -kB * T * (data.dpdql / data.p - data.dpdl*data.dpdq / (data.p*data.p))
+    write_potential('angle.table.EEE', data, U, Ul, Uq, Ulq)
 
     x = numpy.linspace(data.xlo, data.xhi, data.M)
     y = numpy.linspace(data.ylo, data.yhi, data.N)
@@ -48,7 +49,25 @@ def compute_initial_energy(data, T=300.0):
 
     dx = (data.xhi - data.xlo) / (data.M - 1)
     dy = (data.yhi - data.ylo) / (data.N - 1)
-    verify_derivatives(U, dUdl, dUdq, dUdql, dx, dy, 'energy-derivatives.png')
+    verify_derivatives(U, Ul, Uq, Ulq, dx, dy, 'energy-derivatives.png')
+
+
+def write_potential(path, data, U, Ul, Uq, Ulq):
+    ''' Writes a bond-energy LAMMPS potential file.  The file format should be:
+    [keyword]
+    N [numpoints] [# q pts] [# l pts]
+    (blank line)
+    [i] [l] [q] [U] [Ul] [Uq] [Ulq] '''
+    with open(path, 'w') as fid:
+        fid.write('EEE\n')  # write keyword.
+        fid.write('N {} {} {}\n'.format(data.M*data.N, data.N, data.M))
+        ll = numpy.linspace(data.xlo, data.xhi, data.M)
+        qq = numpy.linspace(data.ylo, data.yhi, data.N)
+        for i in range(data.N):
+            for j in range(data.M):
+                I = j + i*data.M
+                fid.write('{} {:.4f} {:.2f} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(
+                    I, ll[j], qq[i], U[j,i], Ul[j,i], Uq[j,i], Ulq[j,i]))
 
 
 def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
@@ -95,5 +114,4 @@ def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
 if __name__ == '__main__':
     data = read_probability_file('p.txt')
     compute_initial_energy(data)
-
 
