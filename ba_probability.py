@@ -55,12 +55,12 @@ def compute_initial_energy(data, T=300.0):
 def write_potential(path, data, U, Ul, Uq, Ulq):
     ''' Writes a bond-energy LAMMPS potential file.  The file format should be:
     [keyword]
-    N [numpoints] [# q pts] [# l pts]
+    N [# q pts] [# l pts]
     (blank line)
     [i] [l] [q] [U] [Ul] [Uq] [Ulq] '''
     with open(path, 'w') as fid:
         fid.write('EEE\n')  # write keyword.
-        fid.write('N {} {} {}\n\n'.format(data.M*data.N, data.N, data.M))
+        fid.write('N {} {}\n\n'.format(data.N, data.M))
         ll = numpy.linspace(data.xlo, data.xhi, data.M)
         qq = numpy.linspace(data.ylo, data.yhi, data.N)
         for i in range(data.N):
