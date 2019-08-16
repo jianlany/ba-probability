@@ -4,7 +4,7 @@ from matplotlib import pyplot
 from mpl_toolkits.mplot3d import Axes3D
 pyplot.rc('font', size=8)
 pyplot.rc('mathtext', fontset='cm')
-
+pyplot.rc('text', usetex=True)
 
 kB = 0.001987204118
 
@@ -41,9 +41,27 @@ def compute_initial_energy(data, T=300.0):
     x = numpy.linspace(data.xlo, data.xhi, data.M)
     y = numpy.linspace(data.ylo, data.yhi, data.N)
     x,y = numpy.meshgrid(x,y)
-    fig = pyplot.figure(figsize=(3,3))
-    ax = fig.gca(projection = '3d')
-    ax.plot_surface(x,y,U, Linewidth=0)
+    fig = pyplot.figure(figsize=(5,3))
+    ax = pyplot.subplot(111)
+
+    class nf(float):
+        def __repr__(self):
+            s = f'{self:.1f}'
+            return f'{self:.0f}' if s[-1] == '0' else s
+    vv = numpy.arange(0.6, 10.5, 0.2)
+    cs = ax.contour(y,0.1*x,U, vv, cmap='viridis', 
+                    linewidths=1.0)
+    cs.levels = [nf(val) for val in cs.levels]
+    ax.clabel(cs, cs.levels[:15], inline=True, fmt='%.1f', fontsize=5, inline_spacing=0)
+
+    ax.set_xlim(90, 180)
+    ax.set_ylim(0.22, 0.27)
+    ax.set_xlabel(r'$\theta$ (rad)')
+    ax.set_ylabel(r'$l$ (nm)')
+    ax.set_xticks([90, 120, 150, 180])
+    ax.set_xticklabels([r'$\frac{1}{2}\pi$', r'$\frac{2}{3}\pi$',    
+                        r'$\frac{5}{6}\pi$', r'$\pi$'])
+
     pyplot.tight_layout()
     pyplot.savefig('U.png', dpi=300)
 
@@ -55,12 +73,12 @@ def compute_initial_energy(data, T=300.0):
 def write_potential(path, data, U, Ul, Uq, Ulq):
     ''' Writes a bond-energy LAMMPS potential file.  The file format should be:
     [keyword]
-    N [# q pts] [# l pts]
+    NL NQ [# l pts] [# q pts]
     (blank line)
     [i] [l] [q] [U] [Ul] [Uq] [Ulq] '''
     with open(path, 'w') as fid:
         fid.write('EEE\n')  # write keyword.
-        fid.write('N {} {}\n\n'.format(data.N, data.M))
+        fid.write('NL NQ {} {}\n\n'.format(data.M, data.N))
         ll = numpy.linspace(data.xlo, data.xhi, data.M)
         qq = numpy.linspace(data.ylo, data.yhi, data.N)
         for i in range(data.N):
