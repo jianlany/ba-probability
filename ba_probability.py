@@ -85,7 +85,7 @@ def write_potential(path, data, U, Ul, Uq, Ulq):
             for j in range(data.M):
                 I = j + i*data.M
                 fid.write('{} {:.4f} {:.2f} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(
-                    I, ll[j], qq[i], U[j,i], Ul[j,i], Uq[j,i], Ulq[j,i]))
+                    I, ll[j], qq[i], U[i,j], Ul[i,j], Uq[i,j], Ulq[i,j]))
 
 
 def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
