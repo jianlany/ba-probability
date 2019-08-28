@@ -53,18 +53,18 @@ int main(int argc, char *argv[]) {
             nl = atoi(argv[i]);
         }
         else if (!strcmp(argv[i], "--d_width_factor") && ++i < argc) {
-            d_width_factor = atoi(argv[i]);
+            d_width_factor = atof(argv[i]);
         }
         else if (!strcmp(argv[i], "--q_width_factor") && ++i < argc) {
-            q_width_factor = atoi(argv[i]);
+            q_width_factor = atof(argv[i]);
         }
         else if (!strcmp(argv[i], "--d_range") && (i+2) < argc) {
-            xlo = atoi(argv[++i]);
-            xhi = atoi(argv[++i]);
+            xlo = atof(argv[++i]);
+            xhi = atof(argv[++i]);
         }
         else if (!strcmp(argv[i], "--theta_range") && (i+2) < argc) {
-            ylo = atoi(argv[++i]);
-            yhi = atoi(argv[++i]);
+            ylo = atof(argv[++i]);
+            yhi = atof(argv[++i]);
         }
         else if (!strcmp(argv[i], "--output-file") && ++i < argc) {
             output_path = argv[i];
