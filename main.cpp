@@ -15,6 +15,7 @@ const std::string help_msg =
         "\t\t--theta_width_factor: same but on angle direction. Default: 1.5\n"
         "\t\t--d_range: the upper and lower limit of bond. Default: 2.0  2.9\n"
         "\t\t--theta_range: the upper and lower limit of angle. Default: 70  180\n"
+        "\t\t--output-file: the path of the output badf file. Default: p.txt\n"
         "\t\t--help: print this message.\n";
 struct BA {
     double d1, d2;
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
     // Bounds on bond-length histogram - TODO: should be set by user.
     int nl=100, nq=100;
     auto xlo = 2.0,  xhi = 2.9;
-    auto ylo = 70.0, yhi = 180.0;
+    auto ylo = 0.0, yhi = 180.0;
     // How many grid spacings the distribution is spread over.
     double d_width_factor = 1.5;
     double q_width_factor = 1.5;
