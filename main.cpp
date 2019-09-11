@@ -12,7 +12,7 @@ const std::string help_msg =
         "\t\t--num_theta: number of bins on angle direction. Default: 100\n"
         "\t\t--num_length: number of bins on bond direction. Default: 100\n"
         "\t\t--d_width_factor: number of bins that the gaussion distribution will spread over on bond direction. Default: 1.5\n"
-        "\t\t--theta_width_factor: same but on angle direction. Default: 1.5\n"
+        "\t\t--q_width_factor: same but on angle direction. Default: 1.5\n"
         "\t\t--d_range: the upper and lower limit of bond. Default: 2.0  2.9\n"
         "\t\t--theta_range: the upper and lower limit of angle. Default: 70  180\n"
         "\t\t--output-file: the path of the output badf file. Default: p.txt\n"
