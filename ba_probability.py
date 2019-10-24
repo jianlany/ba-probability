@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import numpy
 from matplotlib import pyplot
 from mpl_toolkits.mplot3d import Axes3D
@@ -91,17 +92,39 @@ def write_potential(path, data, U, Ul, Uq, Ulq):
 def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
     norm = numpy.linalg.norm
      # Test that dpdl is accurate.
-    fx = (f[:,2:] - f[:,:-2]) / (2.0*dx)
-    e1 = norm(fx - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
-    print('dfdx error norm: {:.5f}'.format(e1))
+    # fx = (f[:,2:] - f[:,:-2]) / (2.0*dx)
+    # e1 = norm(fx - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
+    # print('dfdx error norm: {:.5f}'.format(e1))
 
-    fy = (f[2:,:] - f[:-2,:]) / (2.0*dy)
-    e2 = norm(fy - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
-    print('dfdy error norm: {:.5f}'.format(e2))
+    # fy = (f[2:,:] - f[:-2,:]) / (2.0*dy)
+    # e2 = norm(fy - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
+    # print('dfdy error norm: {:.5f}'.format(e2))
 
-    fxy = (fy[:,2:] - fy[:,:-2]) / (2.0*dx)
-    e3 = norm(fxy - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
-    print('d2xdxdy error norm: {:.5f}'.format(e3))
+    # fxy = (fy[:,2:] - fy[:,:-2]) / (2.0*dx)
+    # e3 = norm(fxy - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
+    # print('d2xdxdy error norm: {:.5f}'.format(e3))
+         # Test that dpdl is accurate.
+    fx2 = (f[:,2:] - f[:,:-2]) / (2.0*dx)
+    e12 = norm(fx2 - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
+    fx8 = -(f[:,8:]/280 -   f[:,7:-1]*4/105 + f[:,6:-2]/5 -     f[:,5:-3]*4/5 + \
+           f[:,3:-5]*4/5 - f[:,2:-6]/5 +     f[:,1:-7]*4/105 - f[:,:-8]/280) / dx
+    e18 = norm(fx8 - dfdx[:,4:-4]) / norm(dfdx[:,4:-4])
+    print('dfdx error norm: {:.5f}'.format(e18))
+
+    fy2 = (f[2:,:] - f[:-2,:]) / (2.0*dy)
+    e22 = norm(fy2 - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
+    fy8 = -(f[8:,:]/280 -   f[7:-1,:]*4/105 + f[6:-2,:]/5 -     f[5:-3,:]*4/5 + \
+           f[3:-5,:]*4/5 - f[2:-6,:]/5 +     f[1:-7,:]*4/105 - f[:-8,:]/280) / dy
+    e28 = norm(fy8 - dfdy[4:-4,:]) / norm(dfdy[4:-4,:])
+    print('dfdy error norm: {:.5f}'.format(e28))
+
+    fxy2 = (fy2[:,2:] - fy2[:,:-2]) / (2.0*dx)
+    e32  = norm(fxy2 - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
+    fxy8 = -(fy8[:,8:]/280 -   fy8[:,7:-1]*4/105 + fy8[:,6:-2]/5 -     fy8[:,5:-3]*4/5 + \
+            fy8[:,3:-5]*4/5 - fy8[:,2:-6]/5 +     fy8[:,1:-7]*4/105 - fy8[:,:-8]/280) / dx
+    e38  = norm(fxy8 - df2dxy[4:-4,4:-4]) / norm(df2dxy[4:-4,4:-4])
+    print('d2xdxdy error norm: {:.5f}'.format(e38))
+
 
     if plot is not None:
         pyplot.figure(figsize=(6,4))
@@ -130,6 +153,9 @@ def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
 
 
 if __name__ == '__main__':
-    data = read_probability_file('p.txt')
-    compute_initial_energy(data)
+    data = read_probability_file(sys.argv[1])
+    # compute_initial_energy(data)
+    dx = (data.xhi-data.xlo)/data.M
+    dy = (data.yhi-data.ylo)/data.N
+    verify_derivatives(data.p, data.dpdl, data.dpdq, data.dpdql, dx, dy)
 
