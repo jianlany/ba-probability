@@ -7,13 +7,10 @@ else
 CPP=/opt/pgi/linux86-64-llvm/19.4/bin/pgc++
 endif
 
-# compute capability of 70, works for V100
-70:
-	${CPP} main.cpp ${CFLAGS} -ta=nvidia,cc70 -o ba-probability
+# compute capability of 70,75,60, works for all the gpus on agave
+agave:
+	${CPP} main.cpp ${CFLAGS} -ta=nvidia,cc70,cc75,cc60 -o ba-probability
 
-# compute capability of 6x, works for 1080, 1080Ti
-60:
-	${CPP} main.cpp ${CFLAGS} -ta=nvidia,cc60 -o ba-probability-60
 
 # compute capability of 35, works for GTX670
 35:
