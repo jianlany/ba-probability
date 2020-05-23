@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
     auto dkernelq = [&](double q) {
         return -q/(wy*wy) * kernelq(q);
     };
-    if (!entropy_factor) {
+    if (entropy_factor) {
         for (int i=0; i<nq; ++i) {
             auto q = ylo + dy*i;
             // Using Simpson's rule so npoints must be even.
