@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
     // How many grid spacings the distribution is spread over.
     double d_width_factor = 1.5;
     double q_width_factor = 1.5;
+    bool entropy_factor = false;
     // Loop over remaining arguments and set optional parameters.
     for (int i=2; i<argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
@@ -69,6 +70,9 @@ int main(int argc, char *argv[]) {
         else if (!strcmp(argv[i], "--output-file") && ++i < argc) {
             output_path = argv[i];
         }
+        else if (!strcmp(argv[i], "--entropy")) {
+            entropy_factor = true;
+        }
         else{
             std::cerr << "Invalid input arguments: " << argv[i] << " \n";
             std::cerr << help_msg;
@@ -93,7 +97,40 @@ int main(int argc, char *argv[]) {
     for (int i=0; i<N; ++i) {
         p[i] = p_l[i] = p_q[i] = p_lq[i] = 0.0;
     }
-    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N])
+
+    // Computes the sin function convolved by the (theta) kernel.
+    double *s = new double[nq];
+    double *dsdq = new double[nq];
+    auto kernelq = [&](double q) {
+        return 1.0/(sqrt(2.0*pi) * wy) * exp(-0.5*q*q/(wy*wy));
+    };
+    auto dkernelq = [&](double q) {
+        return -q/(wy*wy) * kernelq(q);
+    };
+    if (!entropy_factor) {
+        for (int i=0; i<nq; ++i) {
+            auto q = ylo + dy*i;
+            // Using Simpson's rule so npoints must be even.
+            auto npoints = 10*nq;
+            auto dq = pi / npoints;
+            for (int j=1; j<npoints; ++j) {
+                auto a = dq*j;
+                auto f = (j%2) ? 4.0 : 2.0;
+                s[i]    += f * sin(a) * kernelq(q-a);
+                dsdq[i] += f * sin(a) * dkernelq(q-a);
+            }
+            s[i] *= dq / 3.0;
+            dsdq[i] *= dq / 3.0;
+        }
+    }
+    else {
+        for (int i=0; i<nq; ++i) {
+            s[i] = 1.0;
+            dsdq[i] = 0.0;
+        }
+    }
+
+    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N], s[:nq], dsdq[:nq])
     {
     #pragma acc parallel loop collapse(2)
     for (int j=0; j<nl; ++j) {
@@ -109,11 +146,16 @@ int main(int argc, char *argv[]) {
                 auto y = (yk-q) / wy;
                 auto exp1 = exp(-0.5*(x1*x1 + y*y));
                 auto exp2 = exp(-0.5*(x2*x2 + y*y));
-                p[k + j*nq] += Z*exp1 + Z*exp2;
-                p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
-                p_q[k + j*nq] += Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
-                p_lq[k + j*nq] += Z*exp1*(y/wy)*(x1/wx) +
-                                   Z*exp2*(y/wy)*(x2/wx);
+
+                auto pjk = (Z*exp1 + Z*exp2);
+                auto pjk_l = Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
+                auto pjk_q = Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
+                auto pjk_lq = Z*exp1*(y/wy)*(x1/wx) + Z*exp2*(y/wy)*(x2/wx);
+
+                p[k + j*nq] +=  pjk / s[k];
+                p_l[k + j*nq] += pjk_l / s[k];
+                p_q[k + j*nq] += pjk_q / s[k] - pjk * dsdq[k] / (s[k]*s[k]);
+                p_lq[k + j*nq] += pjk_lq / s[k] - pjk_l * dsdq[k] / (s[k]*s[k]); 
             }
         }
     }

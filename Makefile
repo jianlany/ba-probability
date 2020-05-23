@@ -1,11 +1,7 @@
 # default build mode
 
 CFLAGS=-fast -acc -Minfo=acc -std=c++17
-ifneq (,$(findstring agave,${HOSTNAME}))
 CPP=pgc++
-else
-CPP=/opt/pgi/linux86-64-llvm/19.4/bin/pgc++
-endif
 
 # compute capability of 70, works for V100
 70:
