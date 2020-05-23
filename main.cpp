@@ -98,39 +98,7 @@ int main(int argc, char *argv[]) {
         p[i] = p_l[i] = p_q[i] = p_lq[i] = 0.0;
     }
 
-    // Computes the sin function convolved by the (theta) kernel.
-    double *s = new double[nq];
-    double *dsdq = new double[nq];
-    auto kernelq = [&](double q) {
-        return 1.0/(sqrt(2.0*pi) * wy) * exp(-0.5*q*q/(wy*wy));
-    };
-    auto dkernelq = [&](double q) {
-        return -q/(wy*wy) * kernelq(q);
-    };
-    if (entropy_factor) {
-        for (int i=0; i<nq; ++i) {
-            auto q = ylo + dy*i;
-            // Using Simpson's rule so npoints must be even.
-            auto npoints = 10*nq;
-            auto dq = pi / npoints;
-            for (int j=1; j<npoints; ++j) {
-                auto a = dq*j;
-                auto f = (j%2) ? 4.0 : 2.0;
-                s[i]    += f * sin(a) * kernelq(q-a);
-                dsdq[i] += f * sin(a) * dkernelq(q-a);
-            }
-            s[i] *= dq / 3.0;
-            dsdq[i] *= dq / 3.0;
-        }
-    }
-    else {
-        for (int i=0; i<nq; ++i) {
-            s[i] = 1.0;
-            dsdq[i] = 0.0;
-        }
-    }
-
-    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N], s[:nq], dsdq[:nq])
+    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N])
     {
     #pragma acc parallel loop collapse(2)
     for (int j=0; j<nl; ++j) {
@@ -147,18 +115,53 @@ int main(int argc, char *argv[]) {
                 auto exp1 = exp(-0.5*(x1*x1 + y*y));
                 auto exp2 = exp(-0.5*(x2*x2 + y*y));
 
-                auto pjk = (Z*exp1 + Z*exp2);
-                auto pjk_l = Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
-                auto pjk_q = Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
-                auto pjk_lq = Z*exp1*(y/wy)*(x1/wx) + Z*exp2*(y/wy)*(x2/wx);
-
-                p[k + j*nq] +=  pjk / s[k];
-                p_l[k + j*nq] += pjk_l / s[k];
-                p_q[k + j*nq] += pjk_q / s[k] - pjk * dsdq[k] / (s[k]*s[k]);
-                p_lq[k + j*nq] += pjk_lq / s[k] - pjk_l * dsdq[k] / (s[k]*s[k]); 
+                p[k + j*nq] += (Z*exp1 + Z*exp2);
+                p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
+                p_q[k + j*nq] += Z*exp1*(-y/wy) + Z*exp2*(-y/wy);
+                p_lq[k + j*nq] += Z*exp1*(y/wy)*(x1/wx) + Z*exp2*(y/wy)*(x2/wx);
             }
         }
     }
+    }
+
+    if (entropy_factor) {
+        // Computes the sin function convolved by the (theta) kernel.
+        double *s = new double[nq];
+        double *dsdq = new double[nq];
+        // Convert theta bandwidth to radians.
+        auto bw = wy / 180.0 * pi;
+        auto kernelq = [&](double q) {
+            return 1.0/(sqrt(2.0*pi)*bw) * exp(-0.5*q*q/(bw*bw));
+        };
+        auto dkernelq = [&](double q) {
+            return -q/(bw*bw) * kernelq(q);
+        };
+
+        for (int i=0; i<nq; ++i) {
+            auto q = (ylo + dy*i) * pi / 180.0;
+            // Using Simpson's rule so npoints must be even.
+            auto npoints = 10*nq;
+            auto dq = pi / npoints;
+            for (int j=1; j<npoints; ++j) {
+                auto a = dq*j;
+                auto f = (j%2) ? 4.0 : 2.0;
+                s[i]    += f * sin(a) * kernelq(q-a);
+                dsdq[i] += f * sin(a) * dkernelq(q-a);
+            }
+            s[i]    *= dq / 3.0;
+            dsdq[i] *= dq / 3.0;
+            std::cout << q*180.0/pi << "\t" << s[i] << "\t" << dsdq[i] << "\n";
+        }
+
+        for (int j=0; j<nl; ++j) {
+            for (int k=0; k<nq; ++k) {
+                int I = k + j*nq;
+                p[I] /= s[k];
+                p_l[I] /= s[k];
+                p_q[I]  = p_q[I] / s[k] - p[I] * dsdq[k] / (s[k]*s[k]);
+                p_lq[I] = p_lq[I] / s[k] - p_l[I] * dsdq[k] / (s[k]*s[k]); 
+            }
+        }
     }
     auto sum = 0.0;
     for (int i=0; i<nl-1; ++i) {
