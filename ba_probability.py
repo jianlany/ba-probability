@@ -91,19 +91,21 @@ def write_potential(path, data, U, Ul, Uq, Ulq):
 
 def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
     norm = numpy.linalg.norm
-     # Test that dpdl is accurate.
-    # fx = (f[:,2:] - f[:,:-2]) / (2.0*dx)
-    # e1 = norm(fx - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
-    # print('dfdx error norm: {:.5f}'.format(e1))
+    '''
+    fx = (f[:,2:] - f[:,:-2]) / (2.0*dx)
+    e1 = norm(fx - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
+    print('dfdx error norm: {:.5f}'.format(e1))
 
-    # fy = (f[2:,:] - f[:-2,:]) / (2.0*dy)
-    # e2 = norm(fy - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
-    # print('dfdy error norm: {:.5f}'.format(e2))
+    fy = (f[2:,:] - f[:-2,:]) / (2.0*dy)
+    e2 = norm(fy - dfdy[1:-1,:]) / norm(dfdy[1:-1,:])
+    print('dfdy error norm: {:.5f}'.format(e2))
 
-    # fxy = (fy[:,2:] - fy[:,:-2]) / (2.0*dx)
-    # e3 = norm(fxy - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
-    # print('d2xdxdy error norm: {:.5f}'.format(e3))
-         # Test that dpdl is accurate.
+    fxy = (fy[:,2:] - fy[:,:-2]) / (2.0*dx)
+    e3 = norm(fxy - df2dxy[1:-1,1:-1]) / norm(df2dxy[1:-1,1:-1])
+    print('d2xdxdy error norm: {:.5f}'.format(e3))
+    '''
+    
+    # Test that dpdl is accurate.
     fx2 = (f[:,2:] - f[:,:-2]) / (2.0*dx)
     e12 = norm(fx2 - dfdx[:,1:-1]) / norm(dfdx[:,1:-1])
     fx8 = -(f[:,8:]/280 -   f[:,7:-1]*4/105 + f[:,6:-2]/5 -     f[:,5:-3]*4/5 + \
@@ -130,21 +132,21 @@ def verify_derivatives(f, dfdx, dfdy, df2dxy, dx, dy, plot=None):
         pyplot.figure(figsize=(6,4))
         vv = numpy.linspace(-1, 1, 40)
         pp = dict(linewidths = 0.4)
-        s = fx.max() * 0.1
+        s = fx2.max() * 0.1
         ax = pyplot.subplot(231)
-        ax.contour(fx.T, s*vv, vmin=-s, vmax=s, **pp)
+        ax.contour(fx2.T, s*vv, vmin=-s, vmax=s, **pp)
         ax = pyplot.subplot(234)
         ax.contour(dfdx[:,1:-1].T, s*vv, vmin=-s, vmax=s, **pp)
 
         ax = pyplot.subplot(232)
-        s = fy.max() * 0.1
-        ax.contour(fy.T, s*vv, vmin=-s, vmax=s, **pp)
+        s = fy2.max() * 0.1
+        ax.contour(fy2.T, s*vv, vmin=-s, vmax=s, **pp)
         ax = pyplot.subplot(235)
         ax.contour(dfdy[1:-1,:].T, s*vv, vmin=-s, vmax=s, **pp)
 
         ax = pyplot.subplot(233)
-        s = fxy.max() * 0.1
-        ax.contour(fxy.T, s*vv, vmin=-s, vmax=s, **pp)
+        s = fxy2.max() * 0.1
+        ax.contour(fxy2.T, s*vv, vmin=-s, vmax=s, **pp)
         ax = pyplot.subplot(236)
         ax.contour(df2dxy[1:-1,1:-1:].T, s*vv, vmin=-s, vmax=s, **pp)
 

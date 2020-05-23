@@ -149,17 +149,18 @@ int main(int argc, char *argv[]) {
                 dsdq[i] += f * sin(a) * dkernelq(q-a);
             }
             s[i]    *= dq / 3.0;
-            dsdq[i] *= dq / 3.0;
-            std::cout << q*180.0/pi << "\t" << s[i] << "\t" << dsdq[i] << "\n";
+            // Need to convert from rad^-1 to deg^-1.
+            dsdq[i] *= dq / 3.0 * (pi / 180.0);
         }
 
         for (int j=0; j<nl; ++j) {
             for (int k=0; k<nq; ++k) {
                 int I = k + j*nq;
-                p[I] /= s[k];
-                p_l[I] /= s[k];
                 p_q[I]  = p_q[I] / s[k] - p[I] * dsdq[k] / (s[k]*s[k]);
                 p_lq[I] = p_lq[I] / s[k] - p_l[I] * dsdq[k] / (s[k]*s[k]); 
+                // Since p_q and p_lq depend on these, they must go last.
+                p[I] /= s[k];
+                p_l[I] /= s[k];
             }
         }
     }

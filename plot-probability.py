@@ -10,13 +10,18 @@ pyplot.rc('mathtext', fontset='cm')
 data = read_probability_file('p.txt')
 Y = 0.1*numpy.linspace(data.xlo, data.xhi, data.M)
 X = numpy.linspace(data.ylo, data.yhi, data.N)
-pyplot.figure(figsize=(3,3))
+pyplot.figure(figsize=(4,4))
 ax = pyplot.subplot(111)
-ax.contourf(X, Y, data.p.T, 500, cmap='OrRd', vmin=1e-5, vmax=0.1)
-ax.set_xlim(90.0, 180.0)
-ax.set_ylim(0.22, 0.27)
-pyplot.xticks([90.0, 120.0, 150.0, 180.0], 
-              [r'$\frac{\pi}{2}$', r'$\frac{2\pi}{3}$', 
+vv = numpy.linspace(-10, 1, 74)
+pd = numpy.log10(data.p.T)
+jmax, imax = numpy.unravel_index(pd.argmax(axis=None), pd.shape)
+print(pd.max(), 'at', X[imax], Y[jmax])
+ax.contour(X, Y, pd, vv, cmap='Purples', linewidths=0.4)
+ax.set_xlim(0, 180.0)
+#ax.set_ylim(0.22, 0.27)
+pyplot.xticks([0, 30, 60, 90.0, 120.0, 150.0, 180.0], 
+              ['0', r'$\frac{\pi}{6}$', r'$\frac{\pi}{3}$',
+                r'$\frac{\pi}{2}$', r'$\frac{2\pi}{3}$', 
                r'$\frac{5\pi}{6}$', r'$\pi$'])
 
 ax.set_xlabel(r'$\theta$ (rad)')
