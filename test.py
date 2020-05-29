@@ -27,14 +27,17 @@ class Test_ba(unittest.TestCase):
             ' --theta_range 0.0 180.0 --d_width_factor 3.0 --q_width_factor 5.0 --entropy'
     ba_exe = './ba-probability'
 
-    lmin = 1.5
+    lmin = 1.5 # in Anstrom
     lmax = 3.5
-    qmin = 0.0
+    qmin = 0.0 # in degree
     qmax = 180.0
     nl   = 300
     nq   = 500
-    wl   = 3.0
-    wq   = 5.0
+    dl   = (lmax-lmin)/(nl-1)
+    dq   = (qmax-qmin)/(nq-1)
+    wl   = 3.0 * dl
+    wq   = 5.0 * dq
+
     @classmethod
     def setUpClass(cls):
         print('Setting up tests...')
@@ -54,17 +57,15 @@ class Test_ba(unittest.TestCase):
         q = numpy.concatenate((cls.ba_values[:,2], cls.ba_values[:,2]))
         l_grid, q_grid = numpy.meshgrid(numpy.linspace(cls.lmin,cls.lmax,cls.nl),
                                         numpy.linspace(cls.qmin,cls.qmax,cls.nq))
-        cls.dl = (cls.lmax-cls.lmin)/(cls.nl-1)
-        cls.dq = (cls.qmax-cls.qmin)/(cls.nq-1)
         cls.p     = numpy.zeros((cls.nq, cls.nl))
         cls.dpdl  = numpy.zeros((cls.nq, cls.nl))
         cls.dpdq  = numpy.zeros((cls.nq, cls.nl))
         cls.dpdlq = numpy.zeros((cls.nq, cls.nl))
         for l_mean, q_mean in zip(l, q):
-            cls.p     +=     cls.get_p(l_grid, q_grid, cls.wl*cls.dl, cls.wq*cls.dq, l_mean, q_mean)
-            cls.dpdl  +=  cls.get_dpdl(l_grid, q_grid, cls.wl*cls.dl, cls.wq*cls.dq, l_mean, q_mean)
-            cls.dpdq  +=  cls.get_dpdq(l_grid, q_grid, cls.wl*cls.dl, cls.wq*cls.dq, l_mean, q_mean)
-            cls.dpdlq += cls.get_dpdlq(l_grid, q_grid, cls.wl*cls.dl, cls.wq*cls.dq, l_mean, q_mean)
+            cls.p     +=     cls.get_p(l_grid, q_grid, cls.wl, cls.wq, l_mean, q_mean)
+            cls.dpdl  +=  cls.get_dpdl(l_grid, q_grid, cls.wl, cls.wq, l_mean, q_mean)
+            cls.dpdq  +=  cls.get_dpdq(l_grid, q_grid, cls.wl, cls.wq, l_mean, q_mean)
+            cls.dpdlq += cls.get_dpdlq(l_grid, q_grid, cls.wl, cls.wq, l_mean, q_mean)
         cls.p    /= len(l)
         cls.dpdl /= len(l)
         cls.dpdq /= len(l)
@@ -130,8 +131,8 @@ class Test_ba(unittest.TestCase):
         q = numpy.linspace(self.qmin, self.qmax, self.nq)
         q_rad = numpy.deg2rad(q)
         q_dense_rad = numpy.deg2rad(numpy.linspace(self.qmin, self.qmax, self.nq*10))
-        normalizer = 1.0/numpy.sqrt(2*numpy.pi*(self.wq*numpy.deg2rad(self.dq))**2)
-        kernel = lambda q: numpy.exp(-0.5*(q**2/(self.wq*numpy.deg2rad(self.dq))**2))*normalizer
+        normalizer = 1.0/numpy.sqrt(2*numpy.pi*(numpy.deg2rad(self.wq))**2)
+        kernel = lambda q: numpy.exp(-0.5*(q**2/(numpy.deg2rad(self.wq))**2))*normalizer
         s    = numpy.zeros(len(q))
         dsdq = numpy.zeros(len(q))
         # calculate the convolution
