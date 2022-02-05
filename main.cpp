@@ -184,6 +184,7 @@ int main(int argc, char *argv[]) {
     fid << "# (bond angle)  ylo yhi: " << ylo << " " << yhi << "\n";
     auto write_table = [&](const double *x, const char *label) {
         fid << "# " << label << "\n";
+        fid.precision(16);
         for (int j=0; j<nq; ++j) {
             for (int i=0; i<nl; ++i) {
                 if (i > 0) fid << " ";
