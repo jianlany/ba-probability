@@ -23,7 +23,7 @@ struct BA {
 };
 using BA_data = std::vector<BA>;
 
-BA_data read_BA_file(std::string path);
+BA_data read_BA_file(std::string path, double wq);
 
 
 int main(int argc, char *argv[]) {
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     // kernel width is 1.5 grid spacings.
     const auto wx = d_width_factor*dx;
     const auto wy = q_width_factor*dy;
-    auto ba_data = read_BA_file(ba_path);
+    auto ba_data = read_BA_file(ba_path, wy);
     const double *data = &ba_data[0].d1;
     int n_ba = ba_data.size();
     const auto Z = 1.0 / (2.0 * pi * wx*wy) / (2.0 * ba_data.size());
@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
                 auto x1 = (xj-d1) / wx;
                 auto x2 = (xj-d2) / wx;
                 auto y = (yk-q) / wy;
-                auto exp1 = exp(-0.5*(x1*x1 + y*y));
-                auto exp2 = exp(-0.5*(x2*x2 + y*y));
+                auto exp1 = exp(-0.5*(x1*x1 + y*y))/sin(q/180*pi);
+                auto exp2 = exp(-0.5*(x2*x2 + y*y))/sin(q/180*pi);
 
                 p[k + j*nq] += (Z*exp1 + Z*exp2);
                 p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
@@ -174,8 +174,28 @@ int main(int argc, char *argv[]) {
             sum += 0.25*(p1+p2+p3+p4) * dx * dy;
         }
     }
-    // Sum should be close to 1.0.
     std::cout << "Sum = " << sum << "\n";
+
+    int j = nq-1;
+    // Set the value at 180 same as the value at 180 - dq
+    for (int i=0; i<nl; ++i){
+         p[j + i*nq]    = p[j + i*nq - 1];
+         p_l[j + i*nq]  = p_l[j + i*nq - 1];
+         p_q[j + i*nq]  = 0;
+         p_lq[j + i*nq] = 0;
+    }
+
+    // Renormalized the distribution
+    for (int i=0; i<nl; ++i) {
+        for (int j=0; j<nq; ++j) {
+             p[j   + i*nq]    /= sum;
+             p_l[j   + i*nq]  /= sum;
+             p_q[j   + i*nq]  /= sum;
+             p_lq[j   + i*nq] /= sum;
+        }
+    }
+
+    // Sum should be close to 1.0.
     std::fstream fid(output_path, std::ios::out);
 
     fid << "# Probability: " << ba_path << "\n";
@@ -206,7 +226,7 @@ int main(int argc, char *argv[]) {
 
 // Reads the BA datafile output from CG-distributions.  Each row of the file 
 // should contain: [bond_len1, bond_len2, bond_angle].
-BA_data read_BA_file(std::string path) {
+BA_data read_BA_file(std::string path, double wq) {
     BA_data ba_data;
     std::ifstream fid(path, std::ios::in);
     if (!fid) {
@@ -217,6 +237,13 @@ BA_data read_BA_file(std::string path) {
         BA ba;
         fid >> ba.d1 >> ba.d2 >> ba.q;
         if (fid) {
+            ba_data.push_back(ba);
+        }
+        // If there the data point is close to 180 degree
+        // Add an extra one on the other side to avoid fall-off at 180 degree
+        // Not necessary at 0 degree since it's not physically possible.
+        if ((180.0 - ba.q) < 5*wq){
+            ba.q = 360 - ba.q;
             ba_data.push_back(ba);
         }
     }
