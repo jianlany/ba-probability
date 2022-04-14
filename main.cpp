@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
     double d_width_factor = 1.5;
     double q_width_factor = 1.5;
     // Loop over remaining arguments and set optional parameters.
+    bool entropy_factor = false;
     for (int i=2; i<argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
             std::cout << help_msg;
@@ -69,6 +70,9 @@ int main(int argc, char *argv[]) {
         else if (!strcmp(argv[i], "--output-file") && ++i < argc) {
             output_path = argv[i];
         }
+        else if (!strcmp(argv[i], "--entropy")) {
+            entropy_factor = true;
+        }
         else{
             std::cerr << "Invalid input arguments: " << argv[i] << " \n";
             std::cerr << help_msg;
@@ -93,10 +97,10 @@ int main(int argc, char *argv[]) {
     for (int i=0; i<N; ++i) {
         p[i] = p_l[i] = p_q[i] = p_lq[i] = 0.0;
     }
-
-    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N])
+    #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N], entropy_factor)
     {
     #pragma acc parallel loop collapse(2)
+    double entropy_coeff = 1.0;
     for (int j=0; j<nl; ++j) {
         for (int k=0; k<nq; ++k) {
             for (int i=0; i<n_ba; ++i) {
@@ -108,8 +112,9 @@ int main(int argc, char *argv[]) {
                 auto x1 = (xj-d1) / wx;
                 auto x2 = (xj-d2) / wx;
                 auto y = (yk-q) / wy;
-                auto exp1 = exp(-0.5*(x1*x1 + y*y)) / fabs(sin(q/180*pi));
-                auto exp2 = exp(-0.5*(x2*x2 + y*y)) / fabs(sin(q/180*pi));
+                if (entropy_factor) entropy_coeff = 1.0/fabs(sin(q/180.0*pi));
+                auto exp1 = exp(-0.5*(x1*x1 + y*y))*entropy_coeff ;
+                auto exp2 = exp(-0.5*(x2*x2 + y*y))*entropy_coeff ;
 
                 p[k + j*nq] += (Z*exp1 + Z*exp2);
                 p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
