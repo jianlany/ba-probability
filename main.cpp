@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
                 auto x1 = (xj-d1) / wx;
                 auto x2 = (xj-d2) / wx;
                 auto y = (yk-q) / wy;
-                auto exp1 = exp(-0.5*(x1*x1 + y*y))/sin(q/180*pi);
-                auto exp2 = exp(-0.5*(x2*x2 + y*y))/sin(q/180*pi);
+                auto exp1 = exp(-0.5*(x1*x1 + y*y)) / fabs(sin(q/180*pi));
+                auto exp2 = exp(-0.5*(x2*x2 + y*y)) / fabs(sin(q/180*pi));
 
                 p[k + j*nq] += (Z*exp1 + Z*exp2);
                 p_l[k + j*nq] += Z*exp1*(-x1/wx) + Z*exp2*(-x2/wx);
@@ -236,6 +236,7 @@ BA_data read_BA_file(std::string path, double wq) {
     while (fid) {
         BA ba;
         fid >> ba.d1 >> ba.d2 >> ba.q;
+        if (ba.q > 179.99) continue;
         if (fid) {
             ba_data.push_back(ba);
         }
