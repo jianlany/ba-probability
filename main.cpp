@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
     // How many grid spacings the distribution is spread over.
     double d_width_factor = 1.5;
     double q_width_factor = 1.5;
-    bool entropy_factor = false;
     // Loop over remaining arguments and set optional parameters.
     for (int i=2; i<argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
@@ -69,9 +68,6 @@ int main(int argc, char *argv[]) {
         }
         else if (!strcmp(argv[i], "--output-file") && ++i < argc) {
             output_path = argv[i];
-        }
-        else if (!strcmp(argv[i], "--entropy")) {
-            entropy_factor = true;
         }
         else{
             std::cerr << "Invalid input arguments: " << argv[i] << " \n";
@@ -124,46 +120,6 @@ int main(int argc, char *argv[]) {
     }
     }
 
-    if (entropy_factor) {
-        // Computes the sin function convolved by the (theta) kernel.
-        double *s = new double[nq];
-        double *dsdq = new double[nq];
-        // Convert theta bandwidth to radians.
-        auto bw = wy / 180.0 * pi;
-        auto kernelq = [&](double q) {
-            return 1.0/(sqrt(2.0*pi)*bw) * exp(-0.5*q*q/(bw*bw));
-        };
-        auto dkernelq = [&](double q) {
-            return -q/(bw*bw) * kernelq(q);
-        };
-
-        for (int i=0; i<nq; ++i) {
-            auto q = (ylo + dy*i) * pi / 180.0;
-            // Using Simpson's rule so npoints must be even.
-            auto npoints = 10*nq;
-            auto dq = pi / npoints;
-            for (int j=1; j<npoints; ++j) {
-                auto a = dq*j;
-                auto f = (j%2) ? 4.0 : 2.0;
-                s[i]    += f * sin(a) * kernelq(q-a);
-                dsdq[i] += f * sin(a) * dkernelq(q-a);
-            }
-            s[i]    *= dq / 3.0;
-            // Need to convert from rad^-1 to deg^-1.
-            dsdq[i] *= dq / 3.0 * (pi / 180.0);
-        }
-
-        for (int j=0; j<nl; ++j) {
-            for (int k=0; k<nq; ++k) {
-                int I = k + j*nq;
-                p_q[I]  = p_q[I] / s[k] - p[I] * dsdq[k] / (s[k]*s[k]);
-                p_lq[I] = p_lq[I] / s[k] - p_l[I] * dsdq[k] / (s[k]*s[k]); 
-                // Since p_q and p_lq depend on these, they must go last.
-                p[I] /= s[k];
-                p_l[I] /= s[k];
-            }
-        }
-    }
     auto sum = 0.0;
     for (int i=0; i<nl-1; ++i) {
         for (int j=0; j<nq-1; ++j) {
