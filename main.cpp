@@ -99,8 +99,8 @@ int main(int argc, char *argv[]) {
     }
     #pragma acc data copy(data[:3*n_ba], p[:N], p_l[:N], p_q[:N], p_lq[:N], entropy_factor)
     {
-    #pragma acc parallel loop collapse(2)
     double entropy_coeff = 1.0;
+    #pragma acc parallel loop collapse(2)
     for (int j=0; j<nl; ++j) {
         for (int k=0; k<nq; ++k) {
             for (int i=0; i<n_ba; ++i) {
