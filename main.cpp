@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
     double q_width_factor = 1.5;
     // Loop over remaining arguments and set optional parameters.
     bool entropy_factor = false;
+    bool renormalize = false;
     for (int i=2; i<argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
             std::cout << help_msg;
@@ -72,6 +73,9 @@ int main(int argc, char *argv[]) {
         }
         else if (!strcmp(argv[i], "--entropy")) {
             entropy_factor = true;
+        }
+        else if (!strcmp(argv[i], "--renormalize")) {
+            renormalize = true;
         }
         else{
             std::cerr << "Invalid input arguments: " << argv[i] << " \n";
@@ -147,12 +151,14 @@ int main(int argc, char *argv[]) {
     }
 
     // Renormalized the distribution
-    for (int i=0; i<nl; ++i) {
-        for (int j=0; j<nq; ++j) {
-             p[j   + i*nq]    /= sum;
-             p_l[j   + i*nq]  /= sum;
-             p_q[j   + i*nq]  /= sum;
-             p_lq[j   + i*nq] /= sum;
+    if (renormalize){
+        for (int i=0; i<nl; ++i) {
+            for (int j=0; j<nq; ++j) {
+                 p[j   + i*nq]    /= sum;
+                 p_l[j   + i*nq]  /= sum;
+                 p_q[j   + i*nq]  /= sum;
+                 p_lq[j   + i*nq] /= sum;
+            }
         }
     }
 
