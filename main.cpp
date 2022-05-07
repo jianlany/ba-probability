@@ -16,6 +16,8 @@ const std::string help_msg =
         "\t\t--d_range: the upper and lower limit of bond. Default: 2.0  2.9\n"
         "\t\t--theta_range: the upper and lower limit of angle. Default: 0  180\n"
         "\t\t--output-file: the path of the output badf file. Default: p.txt\n"
+        "\t\t--entropy: enable entropy scaling. Default: false\n"
+        "\t\t--renormalize: renormalize the p so that it integrates to 1. Default: false\n"
         "\t\t--help: print this message.\n";
 struct BA {
     double d1, d2;
